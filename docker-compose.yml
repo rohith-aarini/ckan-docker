@@ -12,8 +12,8 @@ services:
       context: nginx/
       dockerfile: Dockerfile
     networks:
-      - webnet
-      - ckannet
+      - webnet  # Public-facing network
+      - ckannet # Internal network connecting CKAN and Nginx
     depends_on:
       ckan:
         condition: service_healthy
@@ -27,10 +27,10 @@ services:
       args:
         - TZ=${TZ}
     networks:
-      - ckannet
-      - dbnet
-      - solrnet
-      - redisnet
+      - ckannet   # Internal network connecting CKAN and Nginx
+      - dbnet     # Internal network for database connections
+      - solrnet   # Internal network for Solr
+      - redisnet  # Internal network for Redis
     env_file:
       - .env
     depends_on:
@@ -47,21 +47,21 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:5000"]
-    
+
   datapusher:
     networks:
-      - ckannet
-      - dbnet
+      - ckannet   # Internal network connecting CKAN and Datapusher
+      - dbnet     # Internal network for database connections
     image: ckan/ckan-base-datapusher:${DATAPUSHER_VERSION}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8800"]
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://0.0.0.0:8800"]
 
   db:
     build:
       context: postgresql/
     networks:
-      - dbnet
+      - dbnet     # Internal network for database connections
     environment:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
@@ -80,7 +80,7 @@ services:
      
   solr:
     networks:
-      - solrnet
+      - solrnet   # Internal network for Solr connections
     image: ckan/ckan-solr:${SOLR_IMAGE_VERSION}
     volumes:
       - solr_data:/var/solr
@@ -91,17 +91,17 @@ services:
   redis:
     image: redis:${REDIS_VERSION}
     networks:
-      - redisnet
+      - redisnet  # Internal network for Redis connections
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "-e", "QUIT"]
-    
+
 networks:
-  webnet:
-  ckannet:
-  solrnet:
+  webnet:        # Public-facing network for Nginx
+  ckannet:       # Internal network connecting CKAN and Nginx
+  solrnet:       # Internal network for Solr connections
     internal: true
-  dbnet:
+  dbnet:         # Internal network for database connections
     internal: true
-  redisnet:
+  redisnet:      # Internal network for Redis connections
     internal: true
